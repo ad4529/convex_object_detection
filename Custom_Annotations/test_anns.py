@@ -1,3 +1,8 @@
+""" Author and Maintainer : Abhisek Dey
+    Master's Thesis Research
+    This code converts MSCOCO segmentation annotations to it's corresponding convex hulls
+    NOT FOR COMMERCIAL USE"""
+
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
