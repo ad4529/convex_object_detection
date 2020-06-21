@@ -47,6 +47,8 @@ def create_hulls(coco, ids):
                             indices = np.arange(0,contour.shape[0],interval)
                             indices = indices[:8]
                             new_hull = contour[indices]
+                            new_hull = np.asarray(new_hull)
+                            new_hull = np.reshape(new_hull, 16)
                             hulls.append(new_hull)
                             tot_valid += 1
                         else:
