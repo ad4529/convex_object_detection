@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 
-ann_dict = np.load('Val_hulls.npy', allow_pickle=True)
+ann_dict = np.load('Train_hulls.npy', allow_pickle=True)
 for idx in ann_dict[()]:
     anns = ann_dict[()][idx][0]
     for ann in anns:

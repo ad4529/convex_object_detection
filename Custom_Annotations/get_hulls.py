@@ -26,28 +26,32 @@ def create_hulls(coco, ids):
         annId = coco.getAnnIds(imgIds=idx)
         anns = coco.loadAnns(annId)
         for pos,ann in enumerate(anns):
+            # Check if there are segmentation masks for the instance
             if ann['segmentation']:
+                # Check if the annotation is accurate
                 if not ann['iscrowd']:
                     mask = coco.annToMask(ann)
                     contour, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                    # Adress the non-contiguous masks
-                    if len(contour) == 1:
-                        contour = contour[0]
-                    else:
-                        contour = np.concatenate(contour, axis=0)
-                    contour = cv2.convexHull(contour)
-                    contour = np.squeeze(contour)
-                    if contour.shape[0] >= 8:
-                        # hull = ConvexHull(contour).simplices
-                        # assert hull.ndim == 2, 'Found more than 1 hull for instance {} in imgId {}'.format(pos,idx)
-                        # if hull.shape[0] >= 8:
-                        interval = int(contour.shape[0]/8)
-                        indices = np.arange(0,contour.shape[0],interval)
-                        indices = indices[:8]
-                        new_hull = contour[indices]
-                        new_hull = new_hull.reshape(16)
-                        hulls.append(new_hull)
-                        tot_valid += 1
+                    # Adress the non-contiguous masks and if mask is valid
+                    if len(contour):
+                        if len(contour) == 1:
+                            contour = contour[0]
+                        else:
+                            contour = np.concatenate(contour, axis=0)
+
+                        contour = cv2.convexHull(contour)
+                        contour = np.squeeze(contour)
+                        # Check if the convex hull has at least 8 vertices
+                        if contour.shape[0] >= 8:
+                            interval = int(contour.shape[0]/8)
+                            indices = np.arange(0,contour.shape[0],interval)
+                            indices = indices[:8]
+                            new_hull = contour[indices]
+                            hulls.append(new_hull)
+                            tot_valid += 1
+                        else:
+                            invalids.append(pos)
+                            tot_invalid += 1
                     else:
                         invalids.append(pos)
                         tot_invalid += 1
@@ -66,8 +70,8 @@ def create_hulls(coco, ids):
     return ann_dict
 
 
-        # img = coco.loadImgs(ids=ids)[0]
-        # I = cv2.imread('/home/abhisek/Desktop/MSCOCO/val2017/' + img['file_name'])
+# img = coco.loadImgs(ids=ids)[0]
+# I = cv2.imread('/home/abhisek/Desktop/MSCOCO/val2017/' + img['file_name'])
 
 
 def main():
@@ -95,9 +99,9 @@ def main():
     val_ids = [ids.lstrip('0') for ids in val_ids]
     val_ids = [int(ids.rstrip('.jpg')) for ids in val_ids]
 
-    # coco_train = COCO(anns_train)
-    # train_dict = create_hulls(coco_train, train_ids)
-    # np.save('Train_hulls.npy', train_dict)
+    coco_train = COCO(anns_train)
+    train_dict = create_hulls(coco_train, train_ids)
+    np.save('Train_hulls.npy', train_dict)
     coco_val = COCO(anns_val)
     val_dict = create_hulls(coco_val, val_ids)
     np.save('Val_hulls.npy', val_dict)
