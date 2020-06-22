@@ -1,3 +1,7 @@
+""" Author and Maintainer : Abhisek Dey
+    Master's Thesis Research
+    This code converts convex hulls to diagonal intersection hulls
+    NOT FOR COMMERCIAL USE"""
 import numpy as np
 from shapely.geometry import Polygon
 import argparse
@@ -9,23 +13,23 @@ from time import sleep
 
 
 def get_diag_intersects(instance):
-    angles = np.radians(np.arange(10,180,45))
+    instance = np.reshape(instance, (8,2))
+    angles = np.radians(np.arange(10,360,45))
     slope = np.tan(angles)
     poly = Polygon(instance)
     centroid = poly.centroid.coords
     centroid = centroid[0]
     consts = centroid[1] - (slope * centroid[0])
     ones = np.ones(len(consts))
-    diag_eqns = np.vstack((-slope, ones, -consts)).T
+    diag_eqns = np.vstack((slope, -ones, consts)).T
     side_eqns = []
     for i in range(len(instance)):
         points = [instance[i], instance[(i+1)%8]]
         x_cord, y_cord = zip(*points)
         A = np.vstack([x_cord, np.ones(len(x_cord))]).T
         m,c = np.linalg.lstsq(A, y_cord, rcond=-1)[0]
-        side_eqns.append([-m, 1, -c])
+        side_eqns.append([m, -1, c])
     side_eqns = np.asarray(side_eqns)
-    side_eqns = np.reshape(side_eqns, (-1,3))
     intersections = np.zeros((8,2))
 
     for j in range(len(diag_eqns)):
@@ -37,15 +41,20 @@ def get_diag_intersects(instance):
                 local_intersects.append([x/z, y/z])
                 local_distances.append(np.linalg.norm([x/z-centroid[0], y/z-centroid[1]]))
         sorted_intersects = [intersect for _,intersect in sorted(zip(local_distances, local_intersects))]
-        act_intersects = sorted_intersects[:2]
-        if act_intersects[0][0] >= centroid[0]:
-            intersections[j] = act_intersects[0]
-            intersections[j+4] = act_intersects[1]
-        elif act_intersects[0][0] < centroid[0]:
-            intersections[j+4] = act_intersects[0]
-            intersections[j] = act_intersects[1]
+        valid_intersects = []
+
+        for k in range(len(sorted_intersects)):
+            if j in [0, 1, 2, 3]:
+                if sorted_intersects[k][1] >= centroid[1]:
+                    valid_intersects.append(sorted_intersects[k])
+            else:
+                if sorted_intersects[k][1] <= centroid[1]:
+                    valid_intersects.append(sorted_intersects[k])
+        if len(valid_intersects) > 0:
+            intersections[j] = valid_intersects[0]
         else:
-            raise Exception("Something wrong with the intersections")
+            print('Assumed')
+            intersections[j] = sorted_intersects[0]
 
     assert np.any((intersections != 0)), 'Some diagonal intersects not found'
     intersections = np.reshape(intersections, 16)
@@ -70,7 +79,7 @@ def main():
     train_anns = np.load(train_path, allow_pickle=True)
     val_anns = np.load(val_path, allow_pickle=True)
 
-    for idx, ann_dict in enumerate([val_anns]):
+    for idx, ann_dict in enumerate([train_anns, val_anns]):
         new_dict = {}
         for ann in tqdm(ann_dict[()]):
             new_hulls = []
@@ -85,7 +94,7 @@ def main():
             new_dict[ann] = [new_hulls, invalids]
         if not idx:
             print('Saving diagonal training annotations')
-            np.save(save_val, new_dict)
+            np.save(save_train, new_dict)
         else:
             print('Saving diagonal validation annotations')
             np.save(save_val)

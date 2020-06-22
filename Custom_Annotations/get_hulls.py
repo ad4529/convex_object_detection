@@ -5,15 +5,10 @@
 
 import os
 from pycocotools.coco import COCO
-from pycocotools import mask
-import matplotlib.pyplot as plt
 import numpy as np
-from imantics import Polygons, Mask
-from scipy.spatial import ConvexHull
 import argparse
 import cv2
 from tqdm import tqdm
-import warnings
 
 
 def create_hulls(coco, ids):
@@ -64,8 +59,9 @@ def create_hulls(coco, ids):
                 invalids.append(pos)
                 tot_invalid += 1
 
-        idx_ann = [hulls, invalids]
-        ann_dict[idx] = idx_ann
+        if len(hulls):
+            idx_ann = [hulls, invalids]
+            ann_dict[idx] = idx_ann
 
     print('Total valid instances: {}'.format(tot_valid))
     print('Total invalid instances: {}'.format(tot_invalid))
