@@ -5,11 +5,9 @@
 import numpy as np
 from shapely.geometry import Polygon
 import argparse
-from multiprocessing import Pool
 import psutil
 import os
 from tqdm import tqdm
-from time import sleep
 
 
 def get_diag_intersects(instance):
@@ -97,7 +95,7 @@ def main():
             np.save(save_train, new_dict)
         else:
             print('Saving diagonal validation annotations')
-            np.save(save_val)
+            np.save(save_val, new_dict)
     print('Done!')
 
 
