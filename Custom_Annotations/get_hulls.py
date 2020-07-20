@@ -9,6 +9,10 @@ import numpy as np
 import argparse
 import cv2
 from tqdm import tqdm
+from scipy.spatial import ConvexHull
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+from shapely.geometry import Polygon
 
 
 def create_hulls(coco, ids):
@@ -28,24 +32,26 @@ def create_hulls(coco, ids):
                     mask = coco.annToMask(ann)
                     contour, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                     # Adress the non-contiguous masks and if mask is valid
-                    if len(contour):
-                        if len(contour) == 1:
-                            contour = contour[0]
-                        else:
-                            contour = np.concatenate(contour, axis=0)
-
+                    if len(contour) == 1:
+                        contour = contour[0]
                         contour = cv2.convexHull(contour)
                         contour = np.squeeze(contour)
-                        # Check if the convex hull has at least 8 vertices
-                        if contour.shape[0] >= 8:
-                            interval = int(contour.shape[0]/8)
-                            indices = np.arange(0,contour.shape[0],interval)
-                            indices = indices[:8]
-                            new_hull = contour[indices]
-                            new_hull = np.asarray(new_hull)
-                            new_hull = np.reshape(new_hull, 16)
-                            hulls.append(new_hull)
-                            tot_valid += 1
+                        if len(contour) >= 8:
+                            kmeans = KMeans(n_clusters=8, random_state=0).fit(contour)
+                            centroids = kmeans.cluster_centers_
+                            centroids = order_points(centroids)
+                            area = Polygon(centroids).area
+                            # Check if the convex hull is big enough
+                            if area >= 5000:
+                                if len(centroids) < 8:
+                                    diff = 8 - len(centroids)
+                                    centroids = np.vstack((centroids, np.tile(centroids[-1,:], (diff,1))))
+                                new_hull = np.reshape(centroids, 16)
+                                hulls.append(new_hull)
+                                tot_valid += 1
+                            else:
+                                invalids.append(pos)
+                                tot_invalid += 1
                         else:
                             invalids.append(pos)
                             tot_invalid += 1
@@ -67,10 +73,26 @@ def create_hulls(coco, ids):
     print('Total invalid instances: {}'.format(tot_invalid))
     return ann_dict
 
-
 # img = coco.loadImgs(ids=ids)[0]
 # I = cv2.imread('/home/abhisek/Desktop/MSCOCO/val2017/' + img['file_name'])
 
+# plt.plot(centroids[:, 0], centroids[:, 1], 'b')
+# plt.plot([contour[0,0], contour[-1,0]], [contour[0,1], contour[-1,1]], 'b')
+# img = coco.loadImgs(ids=ids)[0]
+# I = cv2.imread('/home/abhisek/Desktop/MSCOCO/train2017/' + img['file_name'])
+# centroids = centroids.astype('int32')
+# centroids = centroids.reshape((-1,1,2))
+# I = cv2.polylines(I, [centroids], True, (0,255,255), thickness=2)
+# plt.imshow(cv2.cvtColor(I, cv2.COLOR_BGR2RGB))
+# plt.show()
+
+def order_points(centroids):
+    hull = ConvexHull(centroids)
+    vertices = hull.vertices
+    centroids = centroids[vertices]
+    start_index = np.argmax(centroids[:,0])
+    centroids = np.concatenate((centroids[start_index:], centroids[0:start_index]), axis=0)
+    return centroids
 
 def main():
     parser = argparse.ArgumentParser(description='Specify MSCOCO annotations and dataset paths')
