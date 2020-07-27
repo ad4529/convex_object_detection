@@ -22,11 +22,12 @@ def create_hulls(coco, ids):
     for idx in tqdm(ids):
         hulls = []
         invalids = []
+        centers = []
         annId = coco.getAnnIds(imgIds=idx)
         anns = coco.loadAnns(annId)
         for pos,ann in enumerate(anns):
             # Check if there are segmentation masks for the instance
-            if ann['segmentation']:
+            if ann['segmentation'] and ann['bbox'] and ann['category_id'] == 1:
                 # Check if the annotation is accurate
                 if not ann['iscrowd']:
                     mask = coco.annToMask(ann)
@@ -40,14 +41,17 @@ def create_hulls(coco, ids):
                             kmeans = KMeans(n_clusters=8, random_state=0).fit(contour)
                             centroids = kmeans.cluster_centers_
                             centroids = order_points(centroids)
-                            area = Polygon(centroids).area
+                            poly = Polygon(centroids)
+                            area = poly.area
                             # Check if the convex hull is big enough
-                            if area >= 5000:
+                            if area >= 2500:
+                                center = poly.centroid.coords
                                 if len(centroids) < 8:
                                     diff = 8 - len(centroids)
                                     centroids = np.vstack((centroids, np.tile(centroids[-1,:], (diff,1))))
                                 new_hull = np.reshape(centroids, 16)
                                 hulls.append(new_hull)
+                                centers.append(center)
                                 tot_valid += 1
                             else:
                                 invalids.append(pos)
@@ -66,7 +70,7 @@ def create_hulls(coco, ids):
                 tot_invalid += 1
 
         if len(hulls):
-            idx_ann = [hulls, invalids]
+            idx_ann = [hulls, invalids, centers]
             ann_dict[idx] = idx_ann
 
     print('Total valid instances: {}'.format(tot_valid))
@@ -121,10 +125,10 @@ def main():
 
     coco_train = COCO(anns_train)
     train_dict = create_hulls(coco_train, train_ids)
-    np.save('Train_hulls.npy', train_dict)
+    np.save('Train_hulls_cent_persons.npy', train_dict)
     coco_val = COCO(anns_val)
     val_dict = create_hulls(coco_val, val_ids)
-    np.save('Val_hulls.npy', val_dict)
+    np.save('Val_hulls_cent_persons.npy', val_dict)
 
 if __name__=='__main__':
     main()

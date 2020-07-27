@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from pycocotools.coco import COCO
 
 coco_train = COCO('/home/abhisek/Desktop/MSCOCO/annotations_trainval2017/annotations/instances_train2017.json')
-new_dict = np.load('Train_hulls.npy', allow_pickle=True)
+new_dict = np.load('Train_hulls_cent_persons.npy', allow_pickle=True)
 old_dict = np.load('Diagonal_hulls_train.npy', allow_pickle=True)
 new_ids = list(new_dict[()].keys())
 idx = np.random.randint(0, len(new_ids))

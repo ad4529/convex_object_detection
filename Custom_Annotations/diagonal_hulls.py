@@ -7,8 +7,10 @@ from shapely.geometry import Polygon
 import argparse
 import psutil
 import os
+from multiprocessing import Pool
 from tqdm import tqdm
 
+os.environ["MKL_NUM_THREADS"] = "1"
 
 def get_diag_intersects(instance):
     instance = np.reshape(instance, (8,2))
@@ -60,8 +62,9 @@ def get_diag_intersects(instance):
 
 def limit_cpu():
     p = psutil.Process(os.getpid())
-    p.nice(19)
+    p.nice(5)
 
+#TODO Optimize Parallel Code
 def main():
     parser = argparse.ArgumentParser(description='Specify convex hull annotation paths')
     parser.add_argument('--train_anns', type=str, default='Train_hulls.npy')
@@ -77,19 +80,21 @@ def main():
     train_anns = np.load(train_path, allow_pickle=True)
     val_anns = np.load(val_path, allow_pickle=True)
 
+    pool = Pool(None, limit_cpu)
+
     for idx, ann_dict in enumerate([train_anns, val_anns]):
         new_dict = {}
         for ann in tqdm(ann_dict[()]):
             new_hulls = []
             instances = ann_dict[()][ann][0]
             invalids = ann_dict[()][ann][1]
-            # pool = Pool(None, limit_cpu)
-            # with pool as p:
-            #     intersections = p.map(get_diag_intersects, instances)
-            for instance in instances:
-                intersections = get_diag_intersects(instance)
-                new_hulls.append(intersections)
-            new_dict[ann] = [new_hulls, invalids]
+            pool = Pool(8, limit_cpu)
+            with pool as p:
+                intersections = p.map(get_diag_intersects, instances)
+            # for instance in instances:
+            #     intersections = get_diag_intersects(instance)
+            # new_hulls.append(intersections)
+            new_dict[ann] = [intersections, invalids]
         if not idx:
             print('Saving diagonal training annotations')
             np.save(save_train, new_dict)
