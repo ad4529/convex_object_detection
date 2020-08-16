@@ -16,11 +16,12 @@ All annotations were created from the MSCOCO_'17_ dataset. The folder `Custom_An
 
 ## Training
 
-Currently, only ResNet-50 as a backbone has been tested. To train, make sure you have set the correct `.npy` file containing the convex hull annotations in `Convex_Object_detection/fcos_core/data/datasets/coco.py` and the correct path to the original COCO json annotations in `Convex\_Object\_detection/fcos_core/config/paths_catalog.py`. To train, use:
-	python3 tools/train\_net.py --config-file configs/fcos/fcos\_R\_50\_FPN\_1x.yaml --skip-test DATALOADER.NUM_WORKERS 6 OUTPUT\_DIR _save path_
+Currently, only ResNet-50 as a backbone has been tested. To train, make sure you have set the correct `.npy` file containing the convex hull annotations in `Convex_Object_detection/fcos_core/data/datasets/coco.py` and the correct path to the original COCO json annotations in `Convex_Object_detection/fcos_core/config/paths_catalog.py`. To train, use:
+
+	python3 tools/train_net.py --config-file configs/fcos/fcos_R_50_FPN_1x.yaml --skip-test DATALOADER.NUM_WORKERS 6 OUTPUT_DIR <save path>
 
 ## Inference
-	python3 tools/test\_net.py --config-file configs/fcos/fcos\_R\_50\_FPN\_1x.yaml MODEL.WEIGHT /MSCOCO/no\_convexity\_5C/_MODEL NAME.pth_ TEST.IMS\_PER\_BATCH _BATCH SIZE_
+	python3 tools/test_net.py --config-file configs/fcos/fcos_R_50_FPN_1x.yaml MODEL.WEIGHT /MSCOCO/no_convexity_5C/<MODEL NAME>.pth TEST.IMS_PER_BATCH <BATCH SIZE>
 
 
 
